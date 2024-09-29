@@ -121,3 +121,35 @@
     margin-left: calc(-1 * var(--cui-sidebar-width));
   }
 }
+
+/* Стили для футера при печати */
+@media print {
+  .print-footer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 23px;
+  }
+
+  .pdf-viewer {
+    margin-bottom: 60px;
+  }
+}
+/* Скрыть футер на экране */
+@media screen {
+  .print-footer {
+    display: none;
+  }
+}
+
+.print-footer-left,
+.print-footer-right {
+  width: 50%;
+}
+.print-footer-left {
+  text-align: left;
+}
+
+.print-footer-right {
+  text-align: right;
+}

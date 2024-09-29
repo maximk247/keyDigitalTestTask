@@ -1,39 +1,31 @@
 /* eslint-disable jsx-a11y/alt-text */
 import {
+  CButton,
   CCard,
   CCardBody,
-  CContainer,
-  CLink,
-  CPopover,
-  CRow,
-  CSmartTable,
-  CSpinner,
-  CButton,
-  CModalFooter,
   CCardHeader,
+  CContainer,
 } from '@coreui/react-pro'
-import React, { createRef, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { RenderPageProps, Viewer, Worker } from '@react-pdf-viewer/core'
+import { printPlugin } from '@react-pdf-viewer/print'
+import '@react-pdf-viewer/print/lib/styles/index.css'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import DocumentsApi from './Documents.Api'
-import { useParams } from 'react-router-dom'
-import Modal from '../../components/Modal'
-import Offcanvas from '../../components/Offcanvas'
-import CIcon from '@coreui/icons-react'
-import { cilArrowCircleLeft } from '@coreui/icons'
-import { useTypedSelector } from '../../store'
-import { Viewer, Worker, RenderPageProps } from '@react-pdf-viewer/core'
-import { printOrDownloadDoc } from '../../utils'
 
-const CustomPageLayer: React.FC<{
+interface CustomPageLayerProps {
   renderPageProps: RenderPageProps
-}> = ({ renderPageProps }) => {
+}
+
+// Компонент для кастомизации страницы PDF
+const CustomPageLayer: React.FC<CustomPageLayerProps> = ({
+  renderPageProps,
+}) => {
   React.useEffect(() => {
-    // Mark the page rendered completely when the canvas layer is rendered completely
-    // So the next page will be rendered
     if (renderPageProps.canvasLayerRendered) {
       renderPageProps.markRendered(renderPageProps.pageIndex)
     }
-  }, [renderPageProps.canvasLayerRendered])
+  }, [renderPageProps.canvasLayerRendered, renderPageProps])
 
   return (
     <>
@@ -43,25 +35,20 @@ const CustomPageLayer: React.FC<{
   )
 }
 
+// Функция для рендеринга страницы PDF
 const renderPdfPage = (props: RenderPageProps) => (
   <CustomPageLayer renderPageProps={props} />
 )
 
 const Document = (): JSX.Element => {
   const navigate = useNavigate()
-  const [downloadFileName, setDownloadFileName] = useState('')
-  const [listDocuments, setListDocuments] = useState<any[]>([])
-  const [visible, setVisible] = useState(true)
   const [showPicture, setShowPicture] = useState<any>({})
-  const [downloadDocument, setDownloadDocument] = useState('')
-  const [downloadDocumentMimeType, setDownloadDocumentMimeType] = useState('')
   const [titleName, setTitleName] = useState('')
-  const [dataFormat, setDataFormat] = useState('')
-
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const docName = searchParams.get('name')
 
+  // Получение документа по ID
   const getDocumentsShow = (id: any) => {
     DocumentsApi.getImageById(id).then((result: any) => {
       console.log(result)
@@ -70,8 +57,25 @@ const Document = (): JSX.Element => {
   }
 
   useEffect(() => {
-    getDocumentsShow(id)
+    if (id) {
+      getDocumentsShow(id)
+    }
   }, [id])
+
+  const printPluginInstance = printPlugin()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+  // Обработчик для скачивания документа
+  const handleDownload = () => {
+    if (showPicture?.file?.url) {
+      const link = document.createElement('a')
+      link.href = showPicture.file.url
+      link.download = docName || `Документ_${id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
 
   return (
     <CContainer>
@@ -100,19 +104,19 @@ const Document = (): JSX.Element => {
           >
             {showPicture?.file?.url ? (
               <>
-                {showPicture?.file?.url.includes('.pdf') ? (
+                {showPicture.file.url.endsWith('.pdf') ? (
                   <div
                     className="pdf-viewer"
                     style={{
                       border: '1px solid rgba(0, 0, 0, 0.3)',
-                      // height: '490px',
                       width: '100%',
                     }}
                   >
                     <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.5.141/build/pdf.worker.min.js">
                       <Viewer
-                        fileUrl={showPicture?.file?.url}
+                        fileUrl={showPicture.file.url}
                         renderPage={renderPdfPage}
+                        plugins={[printPluginInstance]}
                         withCredentials={true}
                       />
                     </Worker>
@@ -124,14 +128,37 @@ const Document = (): JSX.Element => {
                         maxWidth: '100%',
                         maxHeight: '100%',
                       }}
-                      src={showPicture?.file?.url}
+                      src={showPicture.file.url}
+                      alt={docName || 'Документ'}
                     />
                   </div>
                 )}
               </>
             ) : (
-              <></>
+              <p>Документ не найден.</p>
             )}
+          </div>
+
+          {/* Добавление кнопок "Печать" и "Скачать" */}
+          <div
+            style={{
+              marginTop: '2rem',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '1rem',
+            }}
+          >
+            {showPicture?.file?.url.endsWith('.pdf') && (
+              <CButton
+                color="primary"
+                onClick={() => printPluginInstance.print()}
+              >
+                Печать
+              </CButton>
+            )}
+            <CButton color="secondary" onClick={handleDownload}>
+              Скачать
+            </CButton>
           </div>
         </CCardBody>
       </CCard>
